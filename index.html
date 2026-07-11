@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>🐶 桌面小狗</title>
+<style>
+:root{
+  --bg-top:#FDEEDC;
+  --bg-bottom:#F9C9B6;
+  --ground:#A8D8B9;
+  --ink:#5B4A3F;
+  --heart:#F28B82;
+  --bubble:#FFFFFF;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;
+  color:var(--ink);
+  -webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;
+}
+#scene{
+  position:fixed;inset:0;overflow:hidden;
+  background:linear-gradient(var(--bg-top),var(--bg-bottom));
+  touch-action:none;
+}
+#ground{
+  position:absolute;left:0;right:0;bottom:0;height:26%;
+  background:var(--ground);
+  border-radius:32px 32px 0 0;
+}
+
+/* ── 上方列 ── */
+#topbar{
+  position:absolute;top:0;left:0;right:0;z-index:30;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px;pointer-events:none;
+}
+#breedBtn{
+  pointer-events:auto;
+  border:2px solid var(--ink);background:var(--bubble);color:var(--ink);
+  border-radius:999px;padding:8px 16px;font-size:15px;font-family:inherit;
+  cursor:pointer;box-shadow:0 3px 0 rgba(91,74,63,.2);
+}
+#breedBtn:active{transform:translateY(2px);box-shadow:none}
+#moodMeter{font-size:20px;letter-spacing:2px}
+
+/* ── 雲朵 ── */
+.cloud{
+  position:absolute;background:#fff;opacity:.85;border-radius:999px;
+  pointer-events:none;z-index:1;
+}
+.cloud::before,.cloud::after{
+  content:"";position:absolute;background:#fff;border-radius:50%;
+}
+#cloud1{width:110px;height:34px;top:13%;left:0;animation:cloud-drift 75s linear infinite;animation-delay:-20s}
+#cloud1::before{width:52px;height:52px;top:-24px;left:16px}
+#cloud1::after{width:36px;height:36px;top:-14px;left:58px}
+#cloud2{width:82px;height:26px;top:25%;left:0;animation:cloud-drift 90s linear infinite;animation-delay:-65s}
+#cloud2::before{width:40px;height:40px;top:-18px;left:12px}
+#cloud2::after{width:28px;height:28px;top:-10px;left:44px}
+@keyframes cloud-drift{
+  from{transform:translateX(-140px)}
+  to{transform:translateX(calc(100vw + 140px))}
+}
+
+/* ── 餵食按鈕 ── */
+#feedBtn{
+  position:absolute;bottom:4%;left:50%;transform:translateX(-50%);z-index:30;
+  border:3px solid var(--ink);background:var(--bubble);color:var(--ink);
+  border-radius:999px;padding:14px 34px;font-size:20px;font-family:inherit;
+  cursor:pointer;box-shadow:0 4px 0 rgba(91,74,63,.25);
+}
+#feedBtn:active:not(:disabled){transform:translateX(-50%) translateY(3px);box-shadow:none}
+#feedBtn:disabled{opacity:.55;cursor:default}
+
+/* ── 狗狗容器 ── */
+#dog{position:absolute;width:150px;height:137px;z-index:10;will-change:transform}
+#jumpWrap{width:100%;height:100%}
+#jumpWrap.bob{animation:body-bob .35s ease-in-out infinite}
+#jumpWrap.jump-once{animation:jump .5s ease-out 1}
+#dogFlip{width:100%;height:100%;transition:transform .15s}
+#dogSvg{width:100%;height:100%;display:block;overflow:visible}
+
+/* 品種配色 */
+#dogSvg.bernese{--fur:#3B3835;--outline:#2A2725;--paw:#B5773A}
+#dogSvg.samoyed{--fur:#FDFDFB;--outline:#E4E0D8;--paw:#FDFDFB}
+#dogSvg.bernese .only-samoyed{display:none}
+#dogSvg.samoyed .only-bernese{display:none}
+
+/* 眼睛四種樣式 */
+#eyes-normal,#eyes-happy,#eyes-sad,#eyes-sleepy{display:none}
+#dogSvg[data-eyes="normal"] #eyes-normal{display:block}
+#dogSvg[data-eyes="happy"]  #eyes-happy{display:block}
+#dogSvg[data-eyes="sad"]    #eyes-sad{display:block}
+#dogSvg[data-eyes="sleepy"] #eyes-sleepy{display:block}
+#blush,#tongue{display:none}
+#dogSvg.show-blush #blush{display:block}
+#dogSvg.show-tongue #tongue{display:block}
+
+/* 尾巴 */
+#tail{
+  transform-box:view-box;transform-origin:60px 108px;
+  animation:tail-wag 1.5s ease-in-out infinite;
+}
+#dogSvg.tail-fast #tail{animation-duration:.4s}
+#dogSvg.tail-still #tail{animation:none}
+@keyframes tail-wag{
+  0%,100%{transform:rotate(-20deg)}
+  50%{transform:rotate(20deg)}
+}
+
+/* 走路：兩組腳交錯 */
+.leg{transform-box:fill-box;transform-origin:50% 0}
+#dogSvg.walking .legA{animation:walk-legs .4s ease-in-out infinite}
+#dogSvg.walking .legB{animation:walk-legs-rev .4s ease-in-out infinite}
+@keyframes walk-legs{
+  0%,100%{transform:rotate(-12deg)}
+  50%{transform:rotate(12deg)}
+}
+@keyframes walk-legs-rev{
+  0%,100%{transform:rotate(12deg)}
+  50%{transform:rotate(-12deg)}
+}
+@keyframes body-bob{
+  0%,100%{transform:translateY(-3px)}
+  50%{transform:translateY(3px)}
+}
+@keyframes jump{
+  0%,100%{transform:translateY(0)}
+  40%{transform:translateY(-18px)}
+  70%{transform:translateY(3px)}
+}
+
+/* 眨眼 */
+#eyes-normal.blink{transform-box:fill-box;transform-origin:50% 50%;animation:blink .15s linear 1}
+@keyframes blink{
+  0%,100%{transform:scaleY(1)}
+  50%{transform:scaleY(.1)}
+}
+
+/* 姿勢 */
+#dogPose{transform-box:view-box;transform-origin:105px 130px;transition:transform .5s cubic-bezier(.34,1.56,.64,1)}
+#dogSvg.sitting #dogPose{transform-origin:85px 180px;transform:rotate(-14deg) translateY(2px)}
+#dogSvg.sitting .legBack{transform-origin:50% 100%;transform:scaleY(.5)}
+#dogSvg.flipped #dogPose{transform:rotate(150deg) translateY(-6px)}
+#dogSvg.curled #dogPose{transform-origin:105px 182px;transform:translateY(24px) scale(.94,.8)}
+#dogSvg.curled .leg{transform-origin:50% 100%;transform:scaleY(.35)}
+#dogSvg.curled #head{transform:translate(-6px,14px) rotate(8deg)}
+#dogSvg.asleep #dogPose{transform:translateY(16px) rotate(80deg)}
+#dogSvg.asleep .leg{transform-origin:50% 100%;transform:scaleY(.55)}
+
+/* 耳朵下垂 */
+.ear{transform-box:fill-box}
+#dogSvg.ears-droop .ear-l{transform-origin:80% 20%;transform:rotate(-24deg)}
+#dogSvg.ears-droop .ear-r{transform-origin:20% 20%;transform:rotate(24deg)}
+
+/* 頭部（撫摸傾頭、吃飯點頭） */
+#head{transform-box:fill-box;transform-origin:50% 82%;transition:transform .25s}
+#dogSvg.eating #head{animation:head-bob .5s ease-in-out infinite}
+@keyframes head-bob{
+  0%,100%{transform:rotate(6deg) translateY(4px)}
+  50%{transform:rotate(20deg) translateY(12px)}
+}
+
+/* 翻肚踢腿 */
+#dogSvg.kick .legBack{animation:leg-kick .12s linear infinite}
+#dogSvg.kick.kick-fast .legBack{animation-duration:.07s}
+@keyframes leg-kick{
+  0%,100%{transform:rotate(-9deg)}
+  50%{transform:rotate(9deg)}
+}
+
+/* 呼吸（睡覺） */
+#dogSvg.asleep #bodyMain{transform-box:fill-box;transform-origin:50% 50%;animation:breathe 2.5s ease-in-out infinite}
+@keyframes breathe{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.04)}
+}
+
+/* 肚子點擊判定（翻肚時放大 1.5 倍的透明區域） */
+#belly-hit{pointer-events:none}
+#dogSvg.flipped #belly-hit{pointer-events:all}
+
+/* ── 愛心 / 星星 / 💤 粒子 ── */
+.particle{
+  position:absolute;z-index:20;pointer-events:none;
+  animation:heart-float 1.2s ease-out forwards;
+}
+.particle.zzz{font-size:20px;animation-duration:1.8s}
+.particle.bigheart{font-size:30px}
+@keyframes heart-float{
+  0%{opacity:1;transform:translate(0,0) scale(.7)}
+  30%{transform:translate(calc(var(--sway) * .6),-22px) scale(1)}
+  60%{transform:translate(var(--sway),-40px) scale(1)}
+  100%{opacity:0;transform:translate(calc(var(--sway) * .2),-60px) scale(1)}
+}
+.star{
+  position:absolute;z-index:20;pointer-events:none;font-size:18px;
+  animation:star-pop .9s ease-out forwards;
+}
+@keyframes star-pop{
+  0%{opacity:0;transform:translate(0,0) scale(.3)}
+  30%{opacity:1;transform:translate(calc(var(--dx) * .7),calc(var(--dy) * .7)) scale(1.1)}
+  100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.6)}
+}
+
+/* ── 對話泡泡 ── */
+#bubble{
+  position:absolute;z-index:25;pointer-events:none;
+  background:var(--bubble);color:var(--ink);
+  border:2px solid var(--ink);border-radius:16px;
+  padding:8px 14px;font-size:15px;white-space:nowrap;
+  transform:translateX(-50%);
+  opacity:0;transition:opacity .3s;
+}
+#bubble::after{
+  content:"";position:absolute;left:50%;bottom:-9px;margin-left:-7px;
+  border:7px solid transparent;border-top-color:var(--ink);border-bottom:none;
+}
+#bubble::before{
+  content:"";position:absolute;left:50%;bottom:-6px;margin-left:-5px;z-index:1;
+  border:5px solid transparent;border-top-color:var(--bubble);border-bottom:none;
+}
+#bubble.show{opacity:1}
+
+/* ── reduced motion：關閉雲朵與彈跳 ── */
+@media (prefers-reduced-motion: reduce){
+  .cloud{display:none}
+  #jumpWrap.bob,#jumpWrap.jump-once{animation:none}
+}
+</style>
+</head>
+<body>
+<div id="scene">
+  <div id="cloud1" class="cloud"></div>
+  <div id="cloud2" class="cloud"></div>
+  <div id="ground"></div>
+
+  <div id="topbar">
+    <button id="breedBtn" type="button">換成薩摩耶 🐕</button>
+    <div id="moodMeter" aria-label="心情"></div>
+  </div>
+
+  <div id="dog">
+    <div id="jumpWrap">
+      <div id="dogFlip">
+        <svg id="dogSvg" class="bernese" viewBox="0 0 220 200" data-eyes="normal" xmlns="http://www.w3.org/2000/svg">
+          <g id="dogPose">
+            <!-- 尾巴（兩品種） -->
+            <g id="tail">
+              <path class="only-bernese" d="M60 108 Q34 120 32 148 Q31 162 42 166 Q40 146 62 130 Z"
+                    fill="var(--fur)" stroke="var(--outline)" stroke-width="3" stroke-linejoin="round"/>
+              <circle class="only-bernese" cx="40" cy="160" r="8" fill="#FDFDFB" stroke="var(--outline)" stroke-width="2"/>
+              <path class="only-samoyed" d="M62 112 Q26 98 36 62 Q44 36 74 46 Q58 58 60 78 Q62 96 76 104 Z"
+                    fill="var(--fur)" stroke="var(--outline)" stroke-width="3" stroke-linejoin="round"/>
+            </g>
+
+            <!-- 四隻腳（A/B 兩組交錯） -->
+            <g id="legs">
+              <g class="leg legBack legA">
+                <rect x="59" y="122" width="18" height="60" rx="9" fill="var(--fur)" stroke="var(--outline)" stroke-width="3"/>
+                <rect x="59" y="168" width="18" height="14" rx="7" fill="var(--paw)" stroke="var(--outline)" stroke-width="2"/>
+              </g>
+              <g class="leg legBack legB">
+                <rect x="81" y="122" width="18" height="60" rx="9" fill="var(--fur)" stroke="var(--outline)" stroke-width="3"/>
+                <rect x="81" y="168" width="18" height="14" rx="7" fill="var(--paw)" stroke="var(--outline)" stroke-width="2"/>
+              </g>
+              <g class="leg legFront legB">
+                <rect x="113" y="122" width="18" height="60" rx="9" fill="var(--fur)" stroke="var(--outline)" stroke-width="3"/>
+                <rect x="113" y="168" width="18" height="14" rx="7" fill="var(--paw)" stroke="var(--outline)" stroke-width="2"/>
+              </g>
+              <g class="leg legFront legA">
+                <rect x="135" y="122" width="18" height="60" rx="9" fill="var(--fur)" stroke="var(--outline)" stroke-width="3"/>
+                <rect x="135" y="168" width="18" height="14" rx="7" fill="var(--paw)" stroke="var(--outline)" stroke-width="2"/>
+              </g>
+            </g>
+
+            <!-- 身體 -->
+            <g id="bodyMain">
+              <ellipse id="body" cx="105" cy="124" rx="58" ry="40" fill="var(--fur)" stroke="var(--outline)" stroke-width="3"/>
+              <ellipse id="chest" cx="140" cy="114" rx="18" ry="26" fill="#FDFDFB" stroke="none"/>
+              <ellipse id="belly" cx="105" cy="142" rx="36" ry="20" fill="#FDFDFB" stroke="none"/>
+            </g>
+
+            <!-- 頭 -->
+            <g id="head">
+              <!-- 薩摩耶蓬頰 -->
+              <ellipse class="only-samoyed" cx="120" cy="84" rx="15" ry="13" fill="var(--fur)" stroke="var(--outline)" stroke-width="2.5"/>
+              <ellipse class="only-samoyed" cx="184" cy="84" rx="15" ry="13" fill="var(--fur)" stroke="var(--outline)" stroke-width="2.5"/>
+              <!-- 伯恩山垂耳 -->
+              <g class="ear ear-l only-bernese"><ellipse cx="116" cy="52" rx="13" ry="25" transform="rotate(18 116 52)" fill="var(--fur)" stroke="var(--outline)" stroke-width="3"/></g>
+              <g class="ear ear-r only-bernese"><ellipse cx="188" cy="52" rx="13" ry="25" transform="rotate(-18 188 52)" fill="var(--fur)" stroke="var(--outline)" stroke-width="3"/></g>
+              <!-- 薩摩耶微立耳 -->
+              <g class="ear ear-l only-samoyed">
+                <path d="M124 36 Q114 12 131 7 Q143 12 142 32 Q133 39 124 36 Z" fill="var(--fur)" stroke="var(--outline)" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M129 30 Q126 18 132 14 Q137 18 136 28 Z" fill="#F5C6C0"/>
+              </g>
+              <g class="ear ear-r only-samoyed">
+                <path d="M180 36 Q190 12 173 7 Q161 12 162 32 Q171 39 180 36 Z" fill="var(--fur)" stroke="var(--outline)" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M175 30 Q178 18 172 14 Q167 18 168 28 Z" fill="#F5C6C0"/>
+              </g>
+              <!-- 頭 -->
+              <circle cx="152" cy="62" r="40" fill="var(--fur)" stroke="var(--outline)" stroke-width="3"/>
+              <!-- 伯恩山白色鼻樑紋 -->
+              <path class="only-bernese" d="M152 27 Q158 50 155 72 L149 72 Q146 50 152 27 Z" fill="#FDFDFB"/>
+              <!-- 伯恩山棕色眉斑 -->
+              <ellipse class="only-bernese" cx="134" cy="42" rx="8" ry="5" fill="#B5773A"/>
+              <ellipse class="only-bernese" cx="170" cy="42" rx="8" ry="5" fill="#B5773A"/>
+              <!-- 腮紅 -->
+              <g id="blush">
+                <ellipse cx="121" cy="74" rx="9" ry="5" fill="var(--heart)" opacity=".75"/>
+                <ellipse cx="183" cy="74" rx="9" ry="5" fill="var(--heart)" opacity=".75"/>
+              </g>
+              <!-- 眼白 -->
+              <circle cx="136" cy="58" r="8" fill="#FFFFFF" stroke="var(--outline)" stroke-width="1.5"/>
+              <circle cx="168" cy="58" r="8" fill="#FFFFFF" stroke="var(--outline)" stroke-width="1.5"/>
+              <!-- 四種眼睛 -->
+              <g id="eyes">
+                <g id="eyes-normal">
+                  <circle cx="136" cy="58" r="4.5" fill="#3B3230"/>
+                  <circle cx="168" cy="58" r="4.5" fill="#3B3230"/>
+                  <circle cx="138" cy="56" r="1.5" fill="#FFFFFF"/>
+                  <circle cx="170" cy="56" r="1.5" fill="#FFFFFF"/>
+                </g>
+                <g id="eyes-happy" fill="none" stroke="#3B3230" stroke-width="3.5" stroke-linecap="round">
+                  <path d="M129 60 Q136 52 143 60"/>
+                  <path d="M161 60 Q168 52 175 60"/>
+                </g>
+                <g id="eyes-sad">
+                  <g fill="none" stroke="#3B3230" stroke-width="3.5" stroke-linecap="round">
+                    <path d="M129 56 Q136 62 143 58"/>
+                    <path d="M161 58 Q168 62 175 56"/>
+                  </g>
+                  <path d="M130 66 q-5 8 0 12 q6 -3 0 -12" fill="#A9D3F0"/>
+                </g>
+                <g id="eyes-sleepy" fill="none" stroke="#3B3230" stroke-width="3" stroke-linecap="round">
+                  <path d="M129 58 L143 58"/>
+                  <path d="M161 58 L175 58"/>
+                </g>
+              </g>
+              <!-- 口鼻 -->
+              <ellipse cx="152" cy="86" rx="20" ry="15" fill="#FDFDFB" stroke="var(--outline)" stroke-width="2"/>
+              <ellipse cx="152" cy="79" rx="7" ry="5" fill="#3B3230"/>
+              <path class="only-bernese" d="M144 92 Q152 98 160 92" fill="none" stroke="#3B3230" stroke-width="3" stroke-linecap="round"/>
+              <path class="only-samoyed" d="M136 88 Q152 104 168 88" fill="none" stroke="#3B3230" stroke-width="3.5" stroke-linecap="round"/>
+              <!-- 舌頭 -->
+              <path id="tongue" d="M147 94 L157 94 Q158 106 152 107 Q146 106 147 94 Z" fill="#F08080" stroke="#D96B6B" stroke-width="1.5"/>
+            </g>
+
+            <!-- 翻肚時的肚子判定區（1.5 倍，最上層） -->
+            <ellipse id="belly-hit" cx="105" cy="142" rx="54" ry="30" fill="transparent"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div id="bubble"></div>
+  <button id="feedBtn" type="button">🦴 餵食</button>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ══════════ 常數（規格書數值） ══════════ */
+var DECAY_NORMAL = 0.15;      // mood 每秒衰減
+var DECAY_LONELY = 0.3;       // lonely 時衰減
+var PET_MOOD = 2, FEED_MOOD = 15, RUB_MOOD = 3, COMFORT_MOOD = 20;
+var PET_DIST = 40;            // 每 40px 一次有效撫摸/搓肚
+var PET_MAX_PER_SEC = 5;
+var FEED_COOLDOWN = 8000;
+var EAT_TIME = 2000;
+var DBLTAP_MS = 300;
+var BELLY_TIMEOUT = 10000;
+var LONELY_AFTER = 90000;
+var COMFORT_PET_SEC = 3;
+var SLEEP_MOOD = 15, SLEEP_AFTER_LONELY = 60000;
+var HAPPY_TIME = 3000;
+var BUBBLE_TIME = 2500;
+var MAX_PARTICLES = 12;
+var WALK_SPEED = 65, LONELY_SPEED = 28, RUN_SPEED = 150;
+var DOG_W = 150, DOG_H = 137, FOOT_Y = 124; // 腳底在容器內的 y 位置
+
+/* ══════════ 文案 ══════════ */
+var LINES = {
+  pet:      ["汪汪!", "最喜歡你了~", "再摸一下嘛", "耳朵後面也要!"],
+  feed:     ["開飯啦!!", "好好吃嗚嗚", "還有嗎…?"],
+  rub:      ["好舒服~~", "腿腿不受控制了", "就是那裡!!"],
+  idle:     ["今天天氣真好", "你在忙嗎?", "陪我玩~"],
+  lonely:   ["……", "是不是忘記我了", "嗚……"],
+  comforted:["你回來了!!!", "嗚嗚我以為你不要我了"],
+  toSamoyed:["換我登場!(微笑)"],
+  toBernese:["換我陪你囉"]
+};
+
+/* ══════════ DOM ══════════ */
+var scene = document.getElementById("scene");
+var groundEl = document.getElementById("ground");
+var dogEl = document.getElementById("dog");
+var jumpWrap = document.getElementById("jumpWrap");
+var dogFlip = document.getElementById("dogFlip");
+var svg = document.getElementById("dogSvg");
+var headEl = document.getElementById("head");
+var eyesNormal = document.getElementById("eyes-normal");
+var bubbleEl = document.getElementById("bubble");
+var feedBtn = document.getElementById("feedBtn");
+var breedBtn = document.getElementById("breedBtn");
+var moodMeter = document.getElementById("moodMeter");
+
+/* ══════════ 場景幾何 ══════════ */
+var sceneW = 0, sceneH = 0, groundY = 0;
+function measure(){
+  sceneW = scene.clientWidth;
+  sceneH = scene.clientHeight;
+  groundY = sceneH - groundEl.clientHeight + 6; // 腳稍微踩進草地
+}
+window.addEventListener("resize", measure);
+measure();
+
+function walkMin(){ return DOG_W/2 + 12; }
+function walkMax(){ return sceneW - DOG_W/2 - 12; }
+function rand(a,b){ return a + Math.random()*(b-a); }
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+
+/* ══════════ 狀態 ══════════ */
+var now = performance.now();
+var st = {
+  mood: 80,
+  state: "idle",          // idle walking sitting happy belly lonely comforted sleeping toFood eating
+  phase: "",              // lonely: go/curl；comforted: rise/run
+  stateSince: now,
+  x: 0, targetX: 0, speed: WALK_SPEED, facing: 1,
+  lastInteraction: now,
+  nextBlinkAt: now + rand(3000,6000),
+  nextWanderAt: now + rand(4000,10000),
+  nextIdleBubbleAt: now + rand(20000,40000),
+  nextLonelyBubbleAt: 0,
+  lonelyCurlAt: 0,        // 進入縮角落趴下的時間
+  comfortSec: 0,          // lonely 中累計被摸秒數
+  happyUntil: 0,
+  breed: "bernese",
+  // 餵食
+  feedReadyAt: 0,
+  food: null,             // {el, x, y, sx, sy, lx, t0, dur, landed, eatStart, wasLonely}
+  // 翻肚
+  bellyLastActivity: 0, rubStreakStart: 0, lastRubAt: 0, bigHeartDone: false,
+  // 指標
+  down: false, lastPX: 0, lastPY: 0, petCarry: 0, rubCarry: 0,
+  petTimes: [], lastTapAt: 0, lastPetMoveAt: 0,
+  headTiltUntil: 0,
+  nextZzzAt: 0,
+  lastBubbleAt: 0, bubbleUntil: 0
+};
+st.x = sceneW/2;
+st.targetX = st.x;
+
+/* ══════════ 泡泡 ══════════ */
+function showBubble(listOrText){
+  var text = typeof listOrText === "string"
+    ? listOrText
+    : listOrText[Math.floor(Math.random()*listOrText.length)];
+  bubbleEl.textContent = text;
+  bubbleEl.classList.add("show");
+  st.lastBubbleAt = now;
+  st.bubbleUntil = now + BUBBLE_TIME;
+}
+
+/* ══════════ 粒子 ══════════ */
+function particleCount(){ return scene.querySelectorAll(".particle").length; }
+
+function spawnHeart(big){
+  if (particleCount() >= MAX_PARTICLES) return;
+  var el = document.createElement("div");
+  el.className = "particle" + (big ? " bigheart" : "");
+  if (big){
+    el.textContent = "💗";
+  } else {
+    el.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 21s-7.5-4.7-10-9C.3 8.7 2 5 5.5 5 8 5 9.6 6.6 12 9c2.4-2.4 4-4 6.5-4C22 5 23.7 8.7 22 12c-2.5 4.3-10 9-10 9z" fill="#F28B82"/></svg>';
+  }
+  el.style.setProperty("--sway", (rand(-14,14)).toFixed(1) + "px");
+  el.style.left = (st.x + rand(-40,40)) + "px";
+  el.style.top = (groundY - FOOT_Y + rand(-20,10)) + "px";
+  scene.appendChild(el);
+  el.addEventListener("animationend", function(){ el.remove(); });
+}
+
+function spawnZzz(){
+  if (particleCount() >= MAX_PARTICLES) return;
+  var el = document.createElement("div");
+  el.className = "particle zzz";
+  el.textContent = "💤";
+  el.style.setProperty("--sway", (rand(-10,10)).toFixed(1) + "px");
+  el.style.left = (st.x + st.facing*30) + "px";
+  el.style.top = (groundY - FOOT_Y + 10) + "px";
+  scene.appendChild(el);
+  el.addEventListener("animationend", function(){ el.remove(); });
+}
+
+function spawnStars(){
+  for (var i=0;i<8;i++){
+    var el = document.createElement("div");
+    el.className = "star";
+    el.textContent = "✨";
+    var ang = (i/8)*Math.PI*2;
+    el.style.setProperty("--dx", (Math.cos(ang)*70).toFixed(0) + "px");
+    el.style.setProperty("--dy", (Math.sin(ang)*55).toFixed(0) + "px");
+    el.style.left = st.x + "px";
+    el.style.top = (groundY - 65) + "px";
+    scene.appendChild(el);
+    el.addEventListener("animationend", function(){ this.remove(); });
+  }
+}
+
+/* ══════════ 姿勢/外觀套用 ══════════ */
+function setEyes(kind){ svg.setAttribute("data-eyes", kind); }
+
+function applyPose(){
+  var s = st.state, p = st.phase;
+  var moving = (s==="walking" || s==="toFood" ||
+               (s==="lonely" && p==="go") || (s==="comforted" && p==="run"));
+  svg.classList.toggle("walking", moving);
+  jumpWrap.classList.toggle("bob", moving && s!=="lonely");
+  svg.classList.toggle("sitting", s==="sitting");
+  svg.classList.toggle("flipped", s==="belly");
+  svg.classList.toggle("curled", (s==="lonely" && p==="curl"));
+  svg.classList.toggle("asleep", s==="sleeping");
+  svg.classList.toggle("eating", s==="eating");
+  svg.classList.toggle("ears-droop", s==="lonely" || s==="sleeping");
+  svg.classList.toggle("tail-fast", s==="happy" || s==="belly" || (s==="comforted"));
+  svg.classList.toggle("tail-still", s==="lonely" || s==="sleeping" || s==="eating");
+  svg.classList.toggle("show-blush", s==="happy" || s==="belly" || (s==="comforted" && st.comfortEyesHappy));
+
+  if (s==="happy") setEyes("happy");
+  else if (s==="lonely") setEyes("sad");
+  else if (s==="sleeping") setEyes("sleepy");
+  else if (s==="belly") setEyes("happy");
+  else if (s==="comforted") setEyes(st.comfortEyesHappy ? "happy" : "sad");
+  else setEyes("normal");
+}
+
+function setState(s, phase){
+  st.state = s;
+  st.phase = phase || "";
+  st.stateSince = now;
+  applyPose();
+}
+
+/* ══════════ 狀態進入函式 ══════════ */
+function scheduleWander(){ st.nextWanderAt = now + rand(4000,10000); }
+
+function enterIdle(){
+  setState("idle");
+  scheduleWander();
+}
+
+function startWalk(tx, speed){
+  st.targetX = clamp(tx, walkMin(), walkMax());
+  st.speed = speed;
+  if (Math.abs(st.targetX - st.x) > 2) st.facing = st.targetX > st.x ? 1 : -1;
+}
+
+function enterHappy(){
+  st.happyUntil = now + HAPPY_TIME;
+  if (st.state !== "happy"){
+    setState("happy");
+    // 原地小跳一下
+    jumpWrap.classList.remove("jump-once");
+    void jumpWrap.offsetWidth;
+    jumpWrap.classList.add("jump-once");
+  }
+}
+
+function enterBelly(){
+  setState("belly");
+  st.bellyLastActivity = now;
+  st.rubStreakStart = 0;
+  st.bigHeartDone = false;
+}
+
+function exitBelly(){
+  svg.classList.remove("kick","kick-fast");
+  enterIdle();
+}
+
+function enterLonely(){
+  setState("lonely","go");
+  st.comfortSec = 0;
+  // 走向最近的角落
+  var corner = st.x < sceneW/2 ? walkMin() : walkMax();
+  startWalk(corner, LONELY_SPEED);
+}
+
+function lonelyCurl(){
+  st.phase = "curl";
+  st.lonelyCurlAt = now;
+  st.nextLonelyBubbleAt = now + rand(10000,18000);
+  applyPose();
+  showBubble(LINES.lonely);
+}
+
+function enterComforted(){
+  st.mood = clamp(st.mood + COMFORT_MOOD, 0, 100);
+  st.comfortEyesHappy = false;
+  setState("comforted","rise");
+  showBubble(LINES.comforted);
+  for (var i=0;i<4;i++) spawnHeart(false);
+}
+
+function enterSleeping(){
+  setState("sleeping");
+  st.nextZzzAt = now + 800;
+}
+
+/* ══════════ 餵食 ══════════ */
+function throwFood(){
+  var btnRect = feedBtn.getBoundingClientRect();
+  var sceneRect = scene.getBoundingClientRect();
+  var sx = btnRect.left - sceneRect.left + btnRect.width/2;
+  var sy = btnRect.top - sceneRect.top;
+  var lx = rand(walkMin(), walkMax());
+  var el = document.createElement("div");
+  el.style.cssText = "position:absolute;z-index:5;font-size:28px;pointer-events:none;";
+  el.textContent = Math.random() < 0.5 ? "🦴" : "🍖";
+  scene.appendChild(el);
+  st.food = { el:el, sx:sx, sy:sy, lx:lx, x:sx, y:sy,
+              t0:now, dur:900, landed:false, eatStart:0,
+              wasLonely:(st.state==="lonely" || st.state==="sleeping") };
+}
+
+function foodLanded(){
+  var f = st.food;
+  f.landed = true;
+  // 走向食物（lonely 慢吞吞）
+  var side = f.lx > st.x ? -1 : 1;      // 站在食物旁邊
+  setState("toFood");
+  startWalk(f.lx + side*46, f.wasLonely ? LONELY_SPEED : WALK_SPEED);
+  if (f.wasLonely) setEyes("sad");
+}
+
+function startEating(){
+  st.facing = st.food.lx > st.x ? 1 : -1;
+  setState("eating");
+  if (st.food.wasLonely) setEyes("sad");
+  st.food.eatStart = now;
+}
+
+function finishEating(){
+  var f = st.food;
+  f.el.remove();
+  st.food = null;
+  st.mood = clamp(st.mood + FEED_MOOD, 0, 100);
+  if (f.wasLonely){
+    // 委屈感關鍵：吃完不會直接開心，慢慢走回角落
+    enterLonely();
+  } else {
+    for (var i=0;i<3;i++) spawnHeart(false);
+    showBubble(LINES.feed);
+    enterHappy();
+  }
+}
+
+feedBtn.addEventListener("click", function(){
+  if (now < st.feedReadyAt || st.food) return;
+  st.feedReadyAt = now + FEED_COOLDOWN;
+  st.lastInteraction = now;
+  feedBtn.disabled = true;
+  if (st.state === "belly") exitBelly();
+  throwFood();
+});
+
+/* ══════════ 換品種 ══════════ */
+breedBtn.addEventListener("click", function(){
+  st.lastInteraction = now;
+  if (st.breed === "bernese"){
+    st.breed = "samoyed";
+    svg.classList.remove("bernese"); svg.classList.add("samoyed");
+    breedBtn.textContent = "換成伯恩山 🐶";
+    showBubble(LINES.toSamoyed);
+  } else {
+    st.breed = "bernese";
+    svg.classList.remove("samoyed"); svg.classList.add("bernese");
+    breedBtn.textContent = "換成薩摩耶 🐕";
+    showBubble(LINES.toBernese);
+  }
+  spawnStars();
+});
+
+/* ══════════ 指標互動（撫摸 / 連點翻肚 / 搓肚） ══════════ */
+function onDog(el){ return el && el.closest && el.closest("#dogSvg"); }
+function onBellyHit(el){ return el && el.closest && el.closest("#belly-hit"); }
+
+scene.addEventListener("pointerdown", function(e){
+  if (e.target.closest("#feedBtn") || e.target.closest("#breedBtn")) return;
+  st.down = true;
+  st.lastPX = e.clientX; st.lastPY = e.clientY;
+  st.petCarry = 0; st.rubCarry = 0;
+  if (!onDog(e.target)) return;
+
+  st.lastInteraction = now;
+
+  // 睡著 → 摸醒進 comforted
+  if (st.state === "sleeping"){ enterComforted(); return; }
+
+  // 連點兩下 → 翻肚 / 翻回
+  if (now - st.lastTapAt < DBLTAP_MS){
+    st.lastTapAt = 0;
+    if (st.state === "belly"){ exitBelly(); return; }
+    if (st.state==="idle" || st.state==="walking" || st.state==="sitting" || st.state==="happy"){
+      enterBelly(); return;
+    }
+  } else {
+    st.lastTapAt = now;
+  }
+  if (st.state === "belly") st.bellyLastActivity = now;
+});
+
+scene.addEventListener("pointermove", function(e){
+  if (!st.down) return;
+  var dx = e.clientX - st.lastPX, dy = e.clientY - st.lastPY;
+  var dist = Math.hypot(dx, dy);
+  st.lastPX = e.clientX; st.lastPY = e.clientY;
+  if (dist <= 0) return;
+  var el = document.elementFromPoint(e.clientX, e.clientY);
+
+  /* 翻肚時：搓肚子 */
+  if (st.state === "belly"){
+    if (onBellyHit(el) || onDog(el)){
+      st.lastInteraction = now;
+      st.bellyLastActivity = now;
+      st.lastRubAt = now;
+      if (!st.rubStreakStart) st.rubStreakStart = now;
+      st.rubCarry += dist;
+      while (st.rubCarry >= PET_DIST){
+        st.rubCarry -= PET_DIST;
+        st.mood = clamp(st.mood + RUB_MOOD, 0, 100);
+        spawnHeart(false);
+        if (now - st.lastBubbleAt > 4000 && Math.random() < 0.3) showBubble(LINES.rub);
+      }
+      // 連續搓超過 3 秒 → 大愛心 + 泡泡
+      if (!st.bigHeartDone && now - st.rubStreakStart > 3000){
+        st.bigHeartDone = true;
+        spawnHeart(true);
+        showBubble("好舒服~~");
+      }
+    }
+    return;
+  }
+
+  /* 一般撫摸（head 或 body 上移動） */
+  if (onDog(el) && st.state !== "eating" && st.state !== "toFood"){
+    st.lastInteraction = now;
+    st.lastPetMoveAt = now;
+
+    // lonely / comforted 前置：累計安撫秒數（在 update 裡加總）
+    st.petCarry += dist;
+    while (st.petCarry >= PET_DIST){
+      st.petCarry -= PET_DIST;
+      // 節流：每秒最多 5 次
+      st.petTimes = st.petTimes.filter(function(t){ return now - t < 1000; });
+      if (st.petTimes.length >= PET_MAX_PER_SEC) break;
+      st.petTimes.push(now);
+      st.mood = clamp(st.mood + PET_MOOD, 0, 100);
+      spawnHeart(false);
+      if (st.state !== "lonely" && st.state !== "comforted" && st.state !== "sleeping"){
+        if (now - st.lastBubbleAt > 4000 && Math.random() < 0.3) showBubble(LINES.pet);
+        enterHappy();
+      }
+    }
+
+    // 摸到頭 → 傾頭 + 吐舌
+    if (el.closest("#head") && st.state !== "lonely" && st.state !== "sleeping"){
+      var dir = (dx >= 0 ? 1 : -1) * st.facing; // 換算成狗狗自身方向
+      headEl.style.transform = "rotate(" + (8*dir) + "deg)";
+      svg.classList.add("show-tongue");
+      st.headTiltUntil = now + 500;
+    }
+  }
+});
+
+function pointerEnd(){ st.down = false; st.petCarry = 0; st.rubCarry = 0; }
+scene.addEventListener("pointerup", pointerEnd);
+scene.addEventListener("pointercancel", pointerEnd);
+scene.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+
+/* ══════════ 主迴圈 ══════════ */
+var moodShown = -1;
+function updateMoodMeter(){
+  var filled = Math.round(st.mood / 20);
+  if (filled === moodShown) return;
+  moodShown = filled;
+  var s = "";
+  for (var i=0;i<5;i++) s += i < filled ? "❤️" : "🤍";
+  moodMeter.textContent = s;
+}
+
+function moveToward(dt){
+  var d = st.targetX - st.x;
+  var step = st.speed * dt;
+  if (Math.abs(d) <= step){ st.x = st.targetX; return true; }
+  st.x += Math.sign(d) * step;
+  st.facing = d > 0 ? 1 : -1;
+  return false;
+}
+
+var lastT = now;
+function loop(t){
+  now = t;
+  var dt = Math.min((t - lastT)/1000, 0.05);
+  lastT = t;
+
+  /* mood 衰減 */
+  var lonelyish = (st.state==="lonely" || st.state==="sleeping");
+  st.mood = clamp(st.mood - (lonelyish ? DECAY_LONELY : DECAY_NORMAL)*dt, 0, 100);
+  updateMoodMeter();
+
+  /* 泡泡淡出 */
+  if (st.bubbleUntil && now > st.bubbleUntil){
+    bubbleEl.classList.remove("show");
+    st.bubbleUntil = 0;
+  }
+
+  /* 頭部回正 */
+  if (st.headTiltUntil && now > st.headTiltUntil){
+    headEl.style.transform = "";
+    svg.classList.remove("show-tongue");
+    st.headTiltUntil = 0;
+  }
+
+  /* 食物拋物線 */
+  if (st.food && !st.food.landed){
+    var f = st.food;
+    var p = Math.min((now - f.t0)/f.dur, 1);
+    f.x = f.sx + (f.lx - f.sx)*p;
+    var gy = groundY - 10;
+    f.y = f.sy + (gy - f.sy)*p - Math.sin(Math.PI*p)*120;
+    f.el.style.left = (f.x - 14) + "px";
+    f.el.style.top = (f.y - 14) + "px";
+    if (p >= 1) foodLanded();
+  }
+
+  /* ── 狀態機 ── */
+  switch (st.state){
+
+    case "idle":
+      if (now - st.lastInteraction > LONELY_AFTER){ enterLonely(); break; }
+      if (now >= st.nextWanderAt){
+        if (Math.random() < 0.15){
+          setState("sitting");
+          st.sitUntil = now + rand(5000,8000);
+        } else {
+          setState("walking");
+          startWalk(rand(walkMin(), walkMax()), WALK_SPEED);
+        }
+      }
+      break;
+
+    case "walking":
+      if (now - st.lastInteraction > LONELY_AFTER){ enterLonely(); break; }
+      if (moveToward(dt)) enterIdle();
+      break;
+
+    case "sitting":
+      if (now - st.lastInteraction > LONELY_AFTER){ enterLonely(); break; }
+      if (now >= st.sitUntil) enterIdle();
+      break;
+
+    case "happy":
+      if (now >= st.happyUntil) enterIdle();
+      break;
+
+    case "belly":
+      // 踢腿：最近有搓才踢，搓得兇踢更快
+      var rubbing = now - st.lastRubAt < 400;
+      svg.classList.toggle("kick", rubbing);
+      svg.classList.toggle("kick-fast", rubbing && now - st.rubStreakStart > 1500);
+      if (!rubbing) st.rubStreakStart = 0;
+      if (now - st.bellyLastActivity > BELLY_TIMEOUT) exitBelly();
+      break;
+
+    case "lonely":
+      if (st.phase === "go"){
+        if (moveToward(dt)) lonelyCurl();
+      } else {
+        // 委屈泡泡
+        if (now >= st.nextLonelyBubbleAt){
+          showBubble(LINES.lonely);
+          st.nextLonelyBubbleAt = now + rand(10000,18000);
+        }
+        // 睡著
+        if (st.mood < SLEEP_MOOD && now - st.lonelyCurlAt > SLEEP_AFTER_LONELY){
+          enterSleeping(); break;
+        }
+      }
+      // 安撫累計：按著並持續在狗身上滑動
+      if (st.down && now - st.lastPetMoveAt < 250){
+        st.comfortSec += dt;
+        if (st.comfortSec >= COMFORT_PET_SEC) enterComforted();
+      }
+      break;
+
+    case "comforted":
+      if (st.phase === "rise"){
+        if (!st.comfortEyesHappy && now - st.stateSince > 700){
+          st.comfortEyesHappy = true;   // 眼睛 sad → happy
+          applyPose();
+        }
+        if (now - st.stateSince > 1400){
+          st.phase = "run";
+          startWalk(sceneW/2, RUN_SPEED);
+          applyPose();
+        }
+      } else if (moveToward(dt)){
+        for (var i=0;i<3;i++) spawnHeart(false);
+        enterHappy();
+      }
+      break;
+
+    case "sleeping":
+      if (now >= st.nextZzzAt){
+        spawnZzz();
+        st.nextZzzAt = now + rand(1500,2500);
+      }
+      break;
+
+    case "toFood":
+      if (moveToward(dt)) startEating();
+      break;
+
+    case "eating":
+      var ef = st.food;
+      if (ef){
+        var ep = Math.min((now - ef.eatStart)/EAT_TIME, 1);
+        ef.el.style.transform = "scale(" + (1-ep) + ")";
+        if (ep >= 1) finishEating();
+      } else {
+        enterIdle();
+      }
+      break;
+  }
+
+  /* 眨眼（只在 normal 眼睛時） */
+  if (now >= st.nextBlinkAt){
+    st.nextBlinkAt = now + rand(3000,6000);
+    if (svg.getAttribute("data-eyes") === "normal"){
+      eyesNormal.classList.remove("blink");
+      void eyesNormal.getBBox;
+      eyesNormal.classList.add("blink");
+      setTimeout(function(){ eyesNormal.classList.remove("blink"); }, 200);
+    }
+  }
+
+  /* idle 偶發泡泡（每 20–40 秒，機率 40%） */
+  if (now >= st.nextIdleBubbleAt){
+    st.nextIdleBubbleAt = now + rand(20000,40000);
+    if ((st.state==="idle" || st.state==="walking" || st.state==="sitting") && Math.random() < 0.4){
+      showBubble(LINES.idle);
+    }
+  }
+
+  /* 餵食冷卻倒數 */
+  if (st.feedReadyAt > now){
+    feedBtn.disabled = true;
+    feedBtn.textContent = "🦴 " + Math.ceil((st.feedReadyAt - now)/1000) + "s";
+  } else if (feedBtn.disabled){
+    feedBtn.disabled = false;
+    feedBtn.textContent = "🦴 餵食";
+  }
+
+  /* ── 繪製 ── */
+  dogEl.style.transform = "translate3d(" + (st.x - DOG_W/2) + "px," + (groundY - FOOT_Y) + "px,0)";
+  dogFlip.style.transform = st.facing === 1 ? "scaleX(1)" : "scaleX(-1)";
+  if (st.bubbleUntil){
+    bubbleEl.style.left = st.x + "px";
+    bubbleEl.style.top = (groundY - FOOT_Y - 34) + "px";
+  }
+
+  requestAnimationFrame(loop);
+}
+
+applyPose();
+updateMoodMeter();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
