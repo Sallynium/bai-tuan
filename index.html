@@ -537,6 +537,8 @@ scene.addEventListener("pointerdown", function(e){
   if (e.target.closest("#feedBtn") || e.target.closest("#breedBtn")) return;
   st.down = true;
   st.lastPX = e.clientX; st.lastPY = e.clientY;
+  st.downStartX = e.clientX; st.downStartY = e.clientY;
+  st.downAt = now; st.downOnDog = !!onDog(e.target);
   st.petCarry = 0; st.rubCarry = 0;
   if (!onDog(e.target)) return;
 
@@ -617,7 +619,20 @@ scene.addEventListener("pointermove", function(e){
 });
 
 function pointerEnd(){ st.down = false; st.petCarry = 0; st.rubCarry = 0; }
-scene.addEventListener("pointerup", pointerEnd);
+scene.addEventListener("pointerup", function(e){
+  // 點空地（非狗、非按鈕的短按）→ 狗狗走去那裡；委屈/睡著/翻肚時叫不動
+  var isTap = st.down && !st.downOnDog &&
+              now - st.downAt < 400 &&
+              Math.hypot(e.clientX - st.downStartX, e.clientY - st.downStartY) < 12 &&
+              !e.target.closest("#feedBtn") && !e.target.closest("#breedBtn");
+  if (isTap && (st.state==="idle" || st.state==="walking" || st.state==="sitting" || st.state==="happy")){
+    st.lastInteraction = now;
+    setState("walking");
+    startWalk(e.clientX, WALK_SPEED); // scene 滿版，clientX 即場景 x 座標
+    scheduleWander();
+  }
+  pointerEnd();
+});
 scene.addEventListener("pointercancel", pointerEnd);
 scene.addEventListener("contextmenu", function(e){ e.preventDefault(); });
 // 手機：擋掉連點縮放與雙指縮放（iOS 會無視 user-scalable=no；按鈕保留原生 click）
