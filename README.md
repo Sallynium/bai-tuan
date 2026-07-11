@@ -26,6 +26,17 @@ python tools/build-sprites.py assets/samoyed-raw.png assets/samoyed-sheet.png
   - 不存檔（無 localStorage）、無音效、無外部資源（CDN/圖片/字型）
   - 不加規格書以外的功能或改動數值
 
+## 玩法
+
+摸摸（按住滑動）、點空地叫牠過去、連點兩下翻肚搓肚、餵食、換狗（領主⇄大將軍）。
+放著 90 秒會鬧脾氣縮角落，只有按住摸 3 秒能哄好；心情太低會睡著。
+遊戲內右上「？」按鈕有完整說明。
+
+## 專案架構
+
+維護指南（檔案地圖、index.html 內部結構、素材管線、驗收方法、編輯地雷）
+全部寫在 **[CLAUDE.md](CLAUDE.md)**——要迭代先讀它。
+
 ## 本機執行
 
 雙擊 `index.html` 即可，或任一靜態伺服器：

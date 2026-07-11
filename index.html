@@ -47,6 +47,38 @@ body{
   cursor:pointer;box-shadow:0 3px 0 rgba(91,74,63,.2);
 }
 #breedBtn:active{transform:translateY(2px);box-shadow:none}
+#topLeft{display:flex;gap:8px;align-items:center;pointer-events:none}
+#helpBtn{
+  pointer-events:auto;touch-action:manipulation;
+  width:38px;height:38px;border-radius:50%;
+  border:2px solid var(--ink);background:var(--bubble);color:var(--ink);
+  font-size:17px;font-family:inherit;cursor:pointer;
+  box-shadow:0 3px 0 rgba(91,74,63,.2);
+}
+#helpBtn:active{transform:translateY(2px);box-shadow:none}
+
+/* ── 玩法說明面板 ── */
+#helpPanel{
+  position:absolute;inset:0;z-index:40;
+  background:rgba(91,74,63,.35);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+#helpPanel[hidden]{display:none}
+#helpCard{
+  background:var(--bubble);color:var(--ink);
+  border:3px solid var(--ink);border-radius:24px;
+  padding:20px 22px;max-width:340px;width:100%;
+  font-size:15px;line-height:2;
+  box-shadow:0 6px 0 rgba(91,74,63,.25);
+}
+#helpCard h2{font-size:18px;margin-bottom:8px}
+#helpCard ul{list-style:none}
+#helpClose{
+  margin-top:12px;width:100%;touch-action:manipulation;
+  border:2px solid var(--ink);background:var(--bubble);color:var(--ink);
+  border-radius:999px;padding:10px;font-size:16px;font-family:inherit;
+  cursor:pointer;box-shadow:0 3px 0 rgba(91,74,63,.2);
+}
 #moodMeter{font-size:20px;letter-spacing:2px}
 
 /* ── 雲朵 ── */
@@ -185,7 +217,10 @@ body{
   <div id="ground"></div>
 
   <div id="topbar">
-    <button id="breedBtn" type="button">換成薩摩耶 🐕</button>
+    <div id="topLeft">
+      <button id="breedBtn" type="button">換成薩摩耶 🐕</button>
+      <button id="helpBtn" type="button" aria-label="怎麼玩">？</button>
+    </div>
     <div id="moodMeter" aria-label="心情"></div>
   </div>
 
@@ -199,6 +234,22 @@ body{
 
   <div id="bubble"></div>
   <button id="feedBtn" type="button">🦴 餵食</button>
+
+  <div id="helpPanel" hidden>
+    <div id="helpCard">
+      <h2>怎麼玩 🐾</h2>
+      <ul>
+        <li>🖐 按住狗狗來回滑動＝摸摸牠</li>
+        <li>👆 點空地＝叫牠走過去</li>
+        <li>✌️ 對狗狗快速連點兩下＝翻肚，搓肚肚會踢腿</li>
+        <li>🦴 餵食按鈕＝丟食物給牠</li>
+        <li>🔄 左上按鈕＝換狗狗，台詞也會換</li>
+        <li>💔 放著 90 秒不理，牠會縮到角落鬧脾氣——只有「按住摸 3 秒」才能哄好</li>
+        <li>😴 心情太低會睡著，摸一下叫醒牠</li>
+      </ul>
+      <button id="helpClose" type="button">知道了！</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -254,6 +305,8 @@ var bubbleEl = document.getElementById("bubble");
 var feedBtn = document.getElementById("feedBtn");
 var breedBtn = document.getElementById("breedBtn");
 var moodMeter = document.getElementById("moodMeter");
+var helpBtn = document.getElementById("helpBtn");
+var helpPanel = document.getElementById("helpPanel");
 
 /* ══════════ 場景幾何 ══════════ */
 var sceneW = 0, sceneH = 0, groundY = 0;
@@ -290,7 +343,7 @@ var st = {
   x: 0, targetX: 0, speed: WALK_SPEED, facing: 1,
   lastInteraction: now,
   nextWanderAt: now + rand(4000,10000),
-  nextIdleBubbleAt: now + rand(20000,40000),
+  nextIdleBubbleAt: now + rand(12000,24000),
   nextLonelyBubbleAt: 0,
   lonelyCurlAt: 0,
   comfortSec: 0, comfortEyesHappy: false,
@@ -499,7 +552,7 @@ function finishEating(){
     enterLonely();
   } else {
     for (var i=0;i<3;i++) spawnHeart(false);
-    showBubble(LINES.feed);
+    showBubble(LINES.feed.concat(BREED_IDLE[st.breed], COMMON_IDLE));
     enterHappy();
   }
 }
@@ -530,11 +583,24 @@ breedBtn.addEventListener("click", function(){
   spawnStars();
 });
 
+/* ══════════ 玩法說明面板 ══════════ */
+helpBtn.addEventListener("click", function(){
+  helpPanel.hidden = false;
+  st.lastInteraction = now;
+});
+helpPanel.addEventListener("click", function(e){
+  if (e.target === helpPanel || e.target.id === "helpClose"){
+    helpPanel.hidden = true;
+    st.lastInteraction = now;
+  }
+});
+
 /* ══════════ 指標互動（撫摸 / 連點翻肚 / 搓肚） ══════════ */
 function onDog(el){ return el && el.closest && el.closest("#dog"); }
 
 scene.addEventListener("pointerdown", function(e){
-  if (e.target.closest("#feedBtn") || e.target.closest("#breedBtn")) return;
+  if (e.target.closest("#feedBtn") || e.target.closest("#breedBtn") ||
+      e.target.closest("#helpBtn") || e.target.closest("#helpPanel")) return;
   st.down = true;
   st.lastPX = e.clientX; st.lastPY = e.clientY;
   st.downStartX = e.clientX; st.downStartY = e.clientY;
@@ -580,7 +646,7 @@ scene.addEventListener("pointermove", function(e){
         st.rubCarry -= PET_DIST;
         st.mood = clamp(st.mood + RUB_MOOD, 0, 100);
         spawnHeart(false);
-        if (now - st.lastBubbleAt > 4000 && Math.random() < 0.3) showBubble(LINES.rub);
+        if (now - st.lastBubbleAt > 2800 && Math.random() < 0.6) showBubble(LINES.rub.concat(BREED_IDLE[st.breed], COMMON_IDLE));
       }
       // 連續搓超過 3 秒 → 大愛心 + 泡泡
       if (!st.bigHeartDone && now - st.rubStreakStart > 3000){
@@ -607,7 +673,7 @@ scene.addEventListener("pointermove", function(e){
       st.mood = clamp(st.mood + PET_MOOD, 0, 100);
       spawnHeart(false);
       if (st.state !== "lonely" && st.state !== "comforted" && st.state !== "sleeping"){
-        if (now - st.lastBubbleAt > 4000 && Math.random() < 0.3) showBubble(LINES.pet);
+        if (now - st.lastBubbleAt > 2800 && Math.random() < 0.6) showBubble(LINES.pet.concat(BREED_IDLE[st.breed], COMMON_IDLE));
         enterHappy();
         // 微微傾向撫摸方向
         var dir = (dx >= 0 ? 1 : -1) * st.facing;
@@ -637,7 +703,8 @@ scene.addEventListener("pointercancel", pointerEnd);
 scene.addEventListener("contextmenu", function(e){ e.preventDefault(); });
 // 手機：擋掉連點縮放與雙指縮放（iOS 會無視 user-scalable=no；按鈕保留原生 click）
 scene.addEventListener("touchend", function(e){
-  if (!e.target.closest("#feedBtn") && !e.target.closest("#breedBtn")) e.preventDefault();
+  if (!e.target.closest("#feedBtn") && !e.target.closest("#breedBtn") &&
+      !e.target.closest("#helpBtn") && !e.target.closest("#helpPanel")) e.preventDefault();
 }, {passive:false});
 document.addEventListener("gesturestart", function(e){ e.preventDefault(); });
 
@@ -795,8 +862,8 @@ function loop(t){
 
   /* idle 偶發泡泡（每 20–40 秒，機率 40%） */
   if (now >= st.nextIdleBubbleAt){
-    st.nextIdleBubbleAt = now + rand(20000,40000);
-    if ((st.state==="idle" || st.state==="walking" || st.state==="sitting") && Math.random() < 0.4){
+    st.nextIdleBubbleAt = now + rand(12000,24000);
+    if ((st.state==="idle" || st.state==="walking" || st.state==="sitting") && Math.random() < 0.6){
       showBubble(LINES.idle.concat(BREED_IDLE[st.breed], COMMON_IDLE));
     }
   }
