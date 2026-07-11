@@ -9,7 +9,7 @@
   - [x] 撫摸 + 愛心粒子 + happy；餵食完整流程（含按鈕冷卻）
   - [x] 連點翻肚、搓肚踢腿
   - [x] mood 系統 + lonely / comforted / sleeping
-  - [ ] 薩摩耶切換（等 Gemini 生成薩摩耶 sprite sheet，切換鈕暫時隱藏）
+  - [x] 薩摩耶切換（柯小白大將軍 ⇄ 小肉團領主，各有專屬台詞）
   - [x] 對話泡泡、雲朵、reduced-motion
 
 ## 素材管線（Gemini 圖 → sprite sheet）

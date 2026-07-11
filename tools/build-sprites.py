@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """把 Gemini 生成的 3x3 白底 sprite sheet 去背、正規化成標準九宮格。
 
-用法: python tools/build-sprites.py assets/bernese-raw.png assets/bernese-sheet.png
+用法: python tools/build-sprites.py <來源圖> <輸出圖> [BG_MIN]
+BG_MIN: 背景判定閾值,預設 205。淺色狗(薩摩耶)描邊接近白色時要拉高(如 238),
+        避免 flood fill 從描邊漏進去吃掉狗身。
 輸出: 3x3、每格 CELL_W x CELL_H、透明背景、姿勢腳底貼齊格子底部。
 """
 import sys
@@ -10,18 +12,17 @@ from PIL import Image
 
 CELL_W, CELL_H = 300, 260
 PAD = 6          # 格內留白
-BG_MIN = 205     # RGB 各通道高於此值視為「可被背景吞掉」(白/淺灰陰影)
 MIN_AREA = 4000  # 小於此面積的雜點(星星等)不算姿勢
 
 
-def main(src, dst):
+def main(src, dst, bg_min=205):
     im = Image.open(src).convert("RGBA")
     w, h = im.size
     px = im.load()
 
     def is_bg(p):
         r, g, b, a = p
-        return a < 10 or (r > BG_MIN and g > BG_MIN and b > BG_MIN)
+        return a < 10 or (r > bg_min and g > bg_min and b > bg_min)
 
     # 1) 從四邊 flood fill 出背景遮罩(奶油白胸口被輪廓線包住,不會被吞)
     bg = bytearray(w * h)
@@ -55,8 +56,9 @@ def main(src, dst):
                        (y > 0 and bg[i - w]) or (y < h - 1 and bg[i + w]))
             if near_bg:
                 avg = (r + g + b) / 3
-                if avg > 180:
-                    alpha = int(max(0, min(255, 255 * (235 - avg) / 55)))
+                full_at, zero_at = bg_min - 25, bg_min + 30
+                if avg > full_at:
+                    alpha = int(max(0, min(255, 255 * (zero_at - avg) / (zero_at - full_at))))
                     px[x, y] = (r, g, b, alpha)
 
     # 3) 連通元件找出各姿勢
@@ -123,4 +125,4 @@ def main(src, dst):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else 205)
